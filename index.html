@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>AuroraFeed — Shell</title>
+  <style>
+    :root{
+      --bg0:#070A11;
+      --bg1:#0A1020;
+      --panel: rgba(20,28,50,.55);
+      --panel2: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.12);
+      --txt:#EAF2FF;
+      --muted: rgba(234,242,255,.62);
+      --good:#7CFFB2;
+      --warn:#FFD46A;
+      --bad:#FF7A7A;
+      --accent:#7AA8FF;
+      --accent2:#9D7AFF;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --r: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --ui: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--ui);
+      color: var(--txt);
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(122,168,255,.35), transparent 55%),
+        radial-gradient(1000px 600px at 90% 20%, rgba(157,122,255,.28), transparent 55%),
+        radial-gradient(900px 700px at 45% 90%, rgba(124,255,178,.16), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow:hidden; /* IMPORTANT: prevents “bottom text dump” from being revealed by scrolling */
+      -webkit-font-smoothing: antialiased;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* In case something accidentally becomes a stray text node, keep it from becoming visible */
+    body > :not(#app){ display:none !important; }
+
+    #app{
+      height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      padding: 12px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding: 12px 14px;
+      border-radius: var(--r);
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+      min-width: 0;
+    }
+    .brand .title{
+      font-weight:700;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .pill{
+      font: 12px/1 var(--mono);
+      padding: 6px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.12);
+      color: var(--muted);
+    }
+    .sub{
+      font: 12px/1.2 var(--mono);
+      color: var(--muted);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .rightHints{
+      text-align:right;
+      font: 12px/1.2 var(--mono);
+      color: var(--muted);
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      white-space:nowrap;
+    }
+
+    .main{
+      flex:1;
+      min-height:0;
+      border-radius: var(--r);
+      background: var(--panel);
+      border:1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .statusbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.12);
+      font: 12px/1 var(--mono);
+      color: var(--muted);
+    }
+    .statusLeft{ display:flex; align-items:center; gap:10px; }
+    .dot{
+      width:10px;height:10px;border-radius:999px;
+      background: rgba(255,255,255,.18);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+    }
+    .dot.good{ background: var(--good); box-shadow: 0 0 0 3px rgba(124,255,178,.14), 0 0 18px rgba(124,255,178,.30); }
+    .dot.warn{ background: var(--warn); box-shadow: 0 0 0 3px rgba(255,212,106,.12), 0 0 18px rgba(255,212,106,.22); }
+    .dot.bad{ background: var(--bad); box-shadow: 0 0 0 3px rgba(255,122,122,.12), 0 0 18px rgba(255,122,122,.22); }
+
+    .output{
+      flex:1;
+      min-height:0;
+      overflow:auto;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .card{
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin: 10px 0;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .card.user{ border-color: rgba(124,255,178,.22); box-shadow: 0 0 0 1px rgba(124,255,178,.06) inset; }
+    .card.sys{ border-color: rgba(122,168,255,.22); box-shadow: 0 0 0 1px rgba(122,168,255,.06) inset; color: rgba(234,242,255,.85); }
+    .card.err{ border-color: rgba(255,122,122,.24); color: rgba(255,220,220,.95); }
+
+    .composer{
+      display:flex;
+      gap:10px;
+      padding: 12px;
+      border-top:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.12);
+    }
+
+    .inputWrap{
+      flex:1;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      background: rgba(0,0,0,.20);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 10px 12px;
+      box-shadow: 0 0 0 1px rgba(122,168,255,.06) inset;
+    }
+    textarea{
+      flex:1;
+      border:0;
+      outline:0;
+      resize:none;
+      background: transparent;
+      color: var(--txt);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.3;
+      min-height: 20px;
+      max-height: 120px;
+    }
+    .hintRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      color: var(--muted);
+      font: 12px/1 var(--mono);
+      white-space:nowrap;
+    }
+
+    .btn{
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(122,168,255,.25), rgba(122,168,255,.10));
+      color: var(--txt);
+      padding: 10px 14px;
+      border-radius: 16px;
+      font: 600 13px/1 var(--ui);
+      cursor:pointer;
+      box-shadow: 0 10px 28px rgba(0,0,0,.35);
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active{ transform: translateY(1px); }
+
+    /* Command Palette */
+    .overlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 16px;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 9999;
+    }
+    .overlay.show{ display:flex; }
+
+    .palette{
+      width:min(760px, 100%);
+      border-radius: 20px;
+      background: rgba(12,16,32,.92);
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 30px 90px rgba(0,0,0,.65);
+      overflow:hidden;
+    }
+    .paletteTop{
+      padding: 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .palInput{
+      flex:1;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--txt);
+      font-family: var(--mono);
+      outline:none;
+    }
+    .palList{
+      max-height: 52vh;
+      overflow:auto;
+      padding: 8px;
+    }
+    .palItem{
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid transparent;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      cursor:pointer;
+    }
+    .palItem:hover{
+      background: rgba(255,255,255,.06);
+      border-color: rgba(122,168,255,.20);
+    }
+    .palLeft{ min-width:0; }
+    .palTitle{ font: 700 13px/1.2 var(--ui); }
+    .palHint{ font: 12px/1.2 var(--mono); color: var(--muted); margin-top: 4px; }
+    .kbd{ font: 12px/1 var(--mono); color: var(--muted); padding: 6px 10px; border-radius: 999px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); white-space:nowrap; }
+
+    /* iOS nicer scrolling */
+    .output, .palList{ -webkit-overflow-scrolling: touch; }
+
+    /* Hide accidental <pre> etc. if it ever appears (belt & suspenders) */
+    pre, code{ font-family: var(--mono); }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">
+          <span style="font-size:16px;">AuroraFeed</span>
+          <span class="pill">Shell online</span>
+        </div>
+        <div class="sub">
+          <span id="netLabel">— checking…</span>
+          <span>Enter=send</span>
+          <span>Shift+Enter=newline</span>
+        </div>
+      </div>
+      <div class="rightHints">
+        <div><span class="kbd">Ctrl</span>+<span class="kbd">K</span> <span class="muted">palette</span></div>
+        <div><span class="kbd">/</span> <span class="muted">commands</span></div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="statusbar">
+        <div class="statusLeft">
+          <span id="dot" class="dot warn"></span>
+          <span id="statusText">Ready</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <span class="pill" id="modulePill">module: shell</span>
+          <span class="pill" id="memPill">mem: 0</span>
+        </div>
+      </div>
+
+      <div class="output" id="out"></div>
+
+      <div class="composer">
+        <div class="inputWrap">
+          <div class="hintRow"><span class="pill">ready</span></div>
+          <textarea id="in" rows="1" placeholder="Type /help, /remember, /recall, /module …"></textarea>
+          <div class="hintRow"><span class="pill">/</span><span class="pill">commands</span></div>
+        </div>
+        <button class="btn" id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Command Palette -->
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="palette" role="dialog" aria-modal="true">
+      <div class="paletteTop">
+        <input class="palInput" id="palInput" placeholder="Search commands… (type to filter)" />
+        <span class="kbd">Esc</span>
+      </div>
+      <div class="palList" id="palList"></div>
+    </div>
+  </div>
+
+  <!-- ALL JS IS SAFELY CONTAINED BELOW (prevents “code showing on page”) -->
+  <script>
+    "use strict";
+
+    // ---- State (simple, local) ----
+    const S = {
+      ui: { module: "shell", lastPaletteQuery: "" },
+      memory: [], // { t, text }
+    };
+
+    // ---- Elements ----
+    const out = document.getElementById("out");
+    const input = document.getElementById("in");
+    const sendBtn = document.getElementById("sendBtn");
+    const statusText = document.getElementById("statusText");
+    const dot = document.getElementById("dot");
+    const modulePill = document.getElementById("modulePill");
+    const memPill = document.getElementById("memPill");
+    const netLabel = document.getElementById("netLabel");
+
+    const overlay = document.getElementById("overlay");
+    const palInput = document.getElementById("palInput");
+    const palList = document.getElementById("palList");
+
+    // ---- Safety: never print raw code accidentally ----
+    function safeText(s){
+      // force string + strip weird non-printables that can wreck layout
+      return String(s).replace(/\u0000/g, "").trimEnd();
+    }
+
+    function setStatus(kind, text){
+      statusText.textContent = text;
+      dot.className = "dot " + (kind || "warn");
+    }
+
+    function addCard(kind, text){
+      const div = document.createElement("div");
+      div.className = "card " + (kind || "sys");
+      div.textContent = safeText(text);
+      out.appendChild(div);
+      out.scrollTop = out.scrollHeight;
+    }
+
+    function updatePills(){
+      modulePill.textContent = "module: " + S.ui.module;
+      memPill.textContent = "mem: " + S.memory.length;
+    }
+
+    // ---- Network label ----
+    function refreshNet(){
+      const online = navigator.onLine;
+      netLabel.textContent = online ? "— online" : "— no network";
+      setStatus(online ? "good" : "warn", online ? "Ready" : "Offline (local)");
+    }
+    window.addEventListener("online", refreshNet);
+    window.addEventListener("offline", refreshNet);
+
+    // ---- Commands ----
+    function paletteCommands(){
+      return [
+        { title:"Switch: Shell", hint:"/module shell", key:"module shell" },
+        { title:"Switch: Notes", hint:"/module notes", key:"module notes" },
+        { title:"Switch: Memory", hint:"/module memory", key:"module memory" },
+        { title:"Switch: TerminalPet", hint:"/module pet", key:"module pet" },
+        { title:"Switch: CodeForge", hint:"/module forge", key:"module forge" },
+        { title:"Remember…", hint:"/remember I like neon", key:"remember " },
+        { title:"Recall…", hint:"/recall neon", key:"recall " },
+        { title:"Show memory list", hint:"/memory", key:"memory" },
+        { title:"Pet status", hint:"/pet", key:"pet" },
+        { title:"Export JSON", hint:"/export", key:"export" },
+        { title:"Import JSON", hint:"/import", key:"import" },
+        { title:"Reset all", hint:"/reset", key:"reset" },
+        { title:"Help", hint:"/help", key:"help" },
+      ];
+    }
+
+    function runCommand(raw){
+      const t = safeText(raw);
+      if(!t) return;
+
+      addCard("user", t);
+
+      // slash commands
+      if(t.startsWith("/")){
+        const parts = t.slice(1).split(" ");
+        const cmd = (parts.shift() || "").toLowerCase();
+        const arg = parts.join(" ").trim();
+
+        if(cmd === "help"){
+          addCard("sys",
+`Commands:
+  /module shell|notes|memory|pet|forge
+  /remember <text>
+  /recall <query>
+  /memory
+  /export
+  /import  (paste JSON after command)
+  /reset`);
+          return;
+        }
+
+        if(cmd === "module"){
+          S.ui.module = (arg || "shell").toLowerCase();
+          updatePills();
+          addCard("sys", "Switched module → " + S.ui.module);
+          return;
+        }
+
+        if(cmd === "remember"){
+          if(!arg){ addCard("err","Usage: /remember <text>"); return; }
+          S.memory.push({ t: Date.now(), text: arg });
+          updatePills();
+          addCard("sys","Saved to memory.");
+          return;
+        }
+
+        if(cmd === "recall"){
+          if(!arg){ addCard("err","Usage: /recall <query>"); return; }
+          const q = arg.toLowerCase();
+          const hits = S.memory
+            .map(m => m.text)
+            .filter(x => x.toLowerCase().includes(q))
+            .slice(-12);
+          addCard("sys", hits.length ? ("Matches:\n- " + hits.join("\n- ")) : "No matches.");
+          return;
+        }
+
+        if(cmd === "memory"){
+          const items = S.memory.slice(-50).map(m => "- " + m.text);
+          addCard("sys", items.length ? ("Memory:\n" + items.join("\n")) : "Memory is empty.");
+          return;
+        }
+
+        if(cmd === "export"){
+          const blob = JSON.stringify({ S }, null, 2);
+          addCard("sys", "Export JSON (copy):\n" + blob);
+          return;
+        }
+
+        if(cmd === "import"){
+          if(!arg){ addCard("err","Paste JSON after /import"); return; }
+          try{
+            const obj = JSON.parse(arg);
+            if(obj && obj.S){
+              Object.assign(S, obj.S);
+              updatePills();
+              addCard("sys","Imported successfully.");
+            } else {
+              addCard("err","Invalid format (expected {S:{...}}).");
+            }
+          }catch(e){
+            addCard("err","Import failed: " + e.message);
+          }
+          return;
+        }
+
+        if(cmd === "reset"){
+          S.ui.module = "shell";
+          S.ui.lastPaletteQuery = "";
+          S.memory = [];
+          out.innerHTML = "";
+          updatePills();
+          addCard("sys","Reset complete.");
+          return;
+        }
+
+        if(cmd === "pet"){
+          addCard("sys","TerminalPet: (stub) happy • energy 92 • hunger 14");
+          return;
+        }
+
+        addCard("err","Unknown command. Try /help");
+        return;
+      }
+
+      // Non-command input: treat as shell-like echo for now
+      addCard("sys", "→ " + t);
+    }
+
+    // ---- Composer behavior (Enter sends, Shift+Enter newline) ----
+    function autoGrow(){
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 120) + "px";
+    }
+    input.addEventListener("input", autoGrow);
+
+    input.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        send();
+      } else if(e.key === "/" && input.value.trim() === ""){
+        // quick open palette from empty prompt
+        // (don’t block typing / in normal text)
+        openPalette();
+        e.preventDefault();
+      }
+    });
+
+    function send(){
+      const v = input.value;
+      input.value = "";
+      autoGrow();
+      runCommand(v);
+    }
+    sendBtn.addEventListener("click", send);
+
+    // ---- Command Palette ----
+    function openPalette(){
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden","false");
+      palInput.value = S.ui.lastPaletteQuery || "";
+      palInput.focus();
+      renderPalette(palInput.value);
+    }
+    function closePalette(){
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden","true");
+      S.ui.lastPaletteQuery = palInput.value || "";
+      input.focus();
+    }
+    function renderPalette(q){
+      const query = (q||"").toLowerCase().trim();
+      const cmds = paletteCommands().filter(c => {
+        if(!query) return true;
+        return (c.title + " " + c.hint + " " + c.key).toLowerCase().includes(query);
+      });
+
+      palList.innerHTML = "";
+      cmds.forEach(c => {
+        const row = document.createElement("div");
+        row.className = "palItem";
+        row.innerHTML = `
+          <div class="palLeft">
+            <div class="palTitle">${c.title}</div>
+            <div class="palHint">${c.hint}</div>
+          </div>
+          <div class="kbd">${c.key}</div>
+        `;
+        row.addEventListener("click", () => {
+          closePalette();
+          input.value = c.hint + (c.hint.endsWith(" ") ? "" : "");
+          autoGrow();
+          input.focus();
+        });
+        palList.appendChild(row);
+      });
+    }
+
+    palInput.addEventListener("input", () => renderPalette(palInput.value));
+    overlay.addEventListener("click", (e) => { if(e.target === overlay) closePalette(); });
+    window.addEventListener("keydown", (e) => {
+      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+
+      if(ctrlOrCmd && e.key.toLowerCase() === "k"){
+        e.preventDefault();
+        if(overlay.classList.contains("show")) closePalette();
+        else openPalette();
+      }
+      if(e.key === "Escape" && overlay.classList.contains("show")){
+        e.preventDefault();
+        closePalette();
+      }
+    });
+
+    // ---- Boot ----
+    function boot(){
+      refreshNet();
+      updatePills();
+      addCard("sys",
+`Welcome to AuroraFeed Shell.
+Try:
+  /help
+  /remember I like neon
+  /recall neon
+  /module forge`);
+      input.focus();
+      autoGrow();
+    }
+    boot();
+
+    // ---- Hard error guard (never render code; show a clean error card) ----
+    window.addEventListener("error", (e) => {
+      addCard("err", "Error: " + (e.message || "Unknown"));
+      setStatus("bad","Error");
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      addCard("err", "Promise rejected: " + (e.reason?.message || e.reason || "Unknown"));
+      setStatus("bad","Error");
+    });
+  </script>
+</body>
+</html>
