@@ -1,641 +1,634 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>AuroraFeed — Shell</title>
-  <style>
-    :root{
-      --bg0:#070A11;
-      --bg1:#0A1020;
-      --panel: rgba(20,28,50,.55);
-      --panel2: rgba(255,255,255,.06);
-      --stroke: rgba(255,255,255,.12);
-      --txt:#EAF2FF;
-      --muted: rgba(234,242,255,.62);
-      --good:#7CFFB2;
-      --warn:#FFD46A;
-      --bad:#FF7A7A;
-      --accent:#7AA8FF;
-      --accent2:#9D7AFF;
-      --shadow: 0 18px 60px rgba(0,0,0,.55);
-      --r: 18px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --ui: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The OmniFile: Futureproof One-File Web</title>
 
-    *{ box-sizing:border-box; }
-    html, body{ height:100%; }
-    body{
-      margin:0;
-      font-family: var(--ui);
-      color: var(--txt);
-      background:
-        radial-gradient(1200px 700px at 15% 10%, rgba(122,168,255,.35), transparent 55%),
-        radial-gradient(1000px 600px at 90% 20%, rgba(157,122,255,.28), transparent 55%),
-        radial-gradient(900px 700px at 45% 90%, rgba(124,255,178,.16), transparent 55%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-      overflow:hidden; /* IMPORTANT: prevents “bottom text dump” from being revealed by scrolling */
-      -webkit-font-smoothing: antialiased;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    }
+    <!-- Base64 Encoded Favicon (example) -->
+    <link rel="icon" href="data:image/svg+xml;base64,..."> 
 
-    /* In case something accidentally becomes a stray text node, keep it from becoming visible */
-    body > :not(#app){ display:none !important; }
+    <style>
+        /* ==========================================================
+           1. FUTUREPROOF UI: CSS Design System, Responsive, Accessible
+           ========================================================== */
+        :root {
+            /* Color Palette */
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #ffffff;
+            --text-color: #343a40;
+            --accent-color: #28a745;
 
-    #app{
-      height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      padding: 12px;
-    }
+            /* Dark Mode Variables (overridden by JS) */
+            --dark-background-color: #212529;
+            --dark-text-color: #f8f9fa;
 
-    .topbar{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      padding: 12px 14px;
-      border-radius: var(--r);
-      background: var(--panel);
-      border: 1px solid var(--stroke);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
+            /* Typography */
+            --font-family-body: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --font-family-heading: 'Georgia', serif;
+            --font-size-base: 16px;
+            --line-height-base: 1.6;
 
-    .brand{
-      display:flex;
-      flex-direction:column;
-      gap:3px;
-      min-width: 0;
-    }
-    .brand .title{
-      font-weight:700;
-      letter-spacing:.2px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .pill{
-      font: 12px/1 var(--mono);
-      padding: 6px 10px;
-      border-radius:999px;
-      background: rgba(255,255,255,.07);
-      border:1px solid rgba(255,255,255,.12);
-      color: var(--muted);
-    }
-    .sub{
-      font: 12px/1.2 var(--mono);
-      color: var(--muted);
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
+            /* Spacing */
+            --spacing-unit: 8px; /* For consistent paddings/margins */
 
-    .rightHints{
-      text-align:right;
-      font: 12px/1.2 var(--mono);
-      color: var(--muted);
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      white-space:nowrap;
-    }
+            /* Border Radii */
+            --border-radius-sm: 4px;
+            --border-radius-md: 8px;
 
-    .main{
-      flex:1;
-      min-height:0;
-      border-radius: var(--r);
-      background: var(--panel);
-      border:1px solid var(--stroke);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-    }
-
-    .statusbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.12);
-      font: 12px/1 var(--mono);
-      color: var(--muted);
-    }
-    .statusLeft{ display:flex; align-items:center; gap:10px; }
-    .dot{
-      width:10px;height:10px;border-radius:999px;
-      background: rgba(255,255,255,.18);
-      box-shadow: 0 0 0 3px rgba(255,255,255,.06);
-    }
-    .dot.good{ background: var(--good); box-shadow: 0 0 0 3px rgba(124,255,178,.14), 0 0 18px rgba(124,255,178,.30); }
-    .dot.warn{ background: var(--warn); box-shadow: 0 0 0 3px rgba(255,212,106,.12), 0 0 18px rgba(255,212,106,.22); }
-    .dot.bad{ background: var(--bad); box-shadow: 0 0 0 3px rgba(255,122,122,.12), 0 0 18px rgba(255,122,122,.22); }
-
-    .output{
-      flex:1;
-      min-height:0;
-      overflow:auto;
-      padding: 12px;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.35;
-    }
-    .card{
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius: 14px;
-      padding: 10px 12px;
-      margin: 10px 0;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-    .card.user{ border-color: rgba(124,255,178,.22); box-shadow: 0 0 0 1px rgba(124,255,178,.06) inset; }
-    .card.sys{ border-color: rgba(122,168,255,.22); box-shadow: 0 0 0 1px rgba(122,168,255,.06) inset; color: rgba(234,242,255,.85); }
-    .card.err{ border-color: rgba(255,122,122,.24); color: rgba(255,220,220,.95); }
-
-    .composer{
-      display:flex;
-      gap:10px;
-      padding: 12px;
-      border-top:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.12);
-    }
-
-    .inputWrap{
-      flex:1;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      background: rgba(0,0,0,.20);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 16px;
-      padding: 10px 12px;
-      box-shadow: 0 0 0 1px rgba(122,168,255,.06) inset;
-    }
-    textarea{
-      flex:1;
-      border:0;
-      outline:0;
-      resize:none;
-      background: transparent;
-      color: var(--txt);
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.3;
-      min-height: 20px;
-      max-height: 120px;
-    }
-    .hintRow{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      color: var(--muted);
-      font: 12px/1 var(--mono);
-      white-space:nowrap;
-    }
-
-    .btn{
-      border:1px solid rgba(255,255,255,.14);
-      background: linear-gradient(180deg, rgba(122,168,255,.25), rgba(122,168,255,.10));
-      color: var(--txt);
-      padding: 10px 14px;
-      border-radius: 16px;
-      font: 600 13px/1 var(--ui);
-      cursor:pointer;
-      box-shadow: 0 10px 28px rgba(0,0,0,.35);
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn:active{ transform: translateY(1px); }
-
-    /* Command Palette */
-    .overlay{
-      position:fixed;
-      inset:0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding: 16px;
-      background: rgba(0,0,0,.55);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 9999;
-    }
-    .overlay.show{ display:flex; }
-
-    .palette{
-      width:min(760px, 100%);
-      border-radius: 20px;
-      background: rgba(12,16,32,.92);
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow: 0 30px 90px rgba(0,0,0,.65);
-      overflow:hidden;
-    }
-    .paletteTop{
-      padding: 12px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .palInput{
-      flex:1;
-      padding: 10px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      color: var(--txt);
-      font-family: var(--mono);
-      outline:none;
-    }
-    .palList{
-      max-height: 52vh;
-      overflow:auto;
-      padding: 8px;
-    }
-    .palItem{
-      padding: 10px 12px;
-      border-radius: 14px;
-      border:1px solid transparent;
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      cursor:pointer;
-    }
-    .palItem:hover{
-      background: rgba(255,255,255,.06);
-      border-color: rgba(122,168,255,.20);
-    }
-    .palLeft{ min-width:0; }
-    .palTitle{ font: 700 13px/1.2 var(--ui); }
-    .palHint{ font: 12px/1.2 var(--mono); color: var(--muted); margin-top: 4px; }
-    .kbd{ font: 12px/1 var(--mono); color: var(--muted); padding: 6px 10px; border-radius: 999px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); white-space:nowrap; }
-
-    /* iOS nicer scrolling */
-    .output, .palList{ -webkit-overflow-scrolling: touch; }
-
-    /* Hide accidental <pre> etc. if it ever appears (belt & suspenders) */
-    pre, code{ font-family: var(--mono); }
-  </style>
-</head>
-
-<body>
-  <div id="app">
-    <div class="topbar">
-      <div class="brand">
-        <div class="title">
-          <span style="font-size:16px;">AuroraFeed</span>
-          <span class="pill">Shell online</span>
-        </div>
-        <div class="sub">
-          <span id="netLabel">— checking…</span>
-          <span>Enter=send</span>
-          <span>Shift+Enter=newline</span>
-        </div>
-      </div>
-      <div class="rightHints">
-        <div><span class="kbd">Ctrl</span>+<span class="kbd">K</span> <span class="muted">palette</span></div>
-        <div><span class="kbd">/</span> <span class="muted">commands</span></div>
-      </div>
-    </div>
-
-    <div class="main">
-      <div class="statusbar">
-        <div class="statusLeft">
-          <span id="dot" class="dot warn"></span>
-          <span id="statusText">Ready</span>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <span class="pill" id="modulePill">module: shell</span>
-          <span class="pill" id="memPill">mem: 0</span>
-        </div>
-      </div>
-
-      <div class="output" id="out"></div>
-
-      <div class="composer">
-        <div class="inputWrap">
-          <div class="hintRow"><span class="pill">ready</span></div>
-          <textarea id="in" rows="1" placeholder="Type /help, /remember, /recall, /module …"></textarea>
-          <div class="hintRow"><span class="pill">/</span><span class="pill">commands</span></div>
-        </div>
-        <button class="btn" id="sendBtn">Send</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Command Palette -->
-  <div class="overlay" id="overlay" aria-hidden="true">
-    <div class="palette" role="dialog" aria-modal="true">
-      <div class="paletteTop">
-        <input class="palInput" id="palInput" placeholder="Search commands… (type to filter)" />
-        <span class="kbd">Esc</span>
-      </div>
-      <div class="palList" id="palList"></div>
-    </div>
-  </div>
-
-  <!-- ALL JS IS SAFELY CONTAINED BELOW (prevents “code showing on page”) -->
-  <script>
-    "use strict";
-
-    // ---- State (simple, local) ----
-    const S = {
-      ui: { module: "shell", lastPaletteQuery: "" },
-      memory: [], // { t, text }
-    };
-
-    // ---- Elements ----
-    const out = document.getElementById("out");
-    const input = document.getElementById("in");
-    const sendBtn = document.getElementById("sendBtn");
-    const statusText = document.getElementById("statusText");
-    const dot = document.getElementById("dot");
-    const modulePill = document.getElementById("modulePill");
-    const memPill = document.getElementById("memPill");
-    const netLabel = document.getElementById("netLabel");
-
-    const overlay = document.getElementById("overlay");
-    const palInput = document.getElementById("palInput");
-    const palList = document.getElementById("palList");
-
-    // ---- Safety: never print raw code accidentally ----
-    function safeText(s){
-      // force string + strip weird non-printables that can wreck layout
-      return String(s).replace(/\u0000/g, "").trimEnd();
-    }
-
-    function setStatus(kind, text){
-      statusText.textContent = text;
-      dot.className = "dot " + (kind || "warn");
-    }
-
-    function addCard(kind, text){
-      const div = document.createElement("div");
-      div.className = "card " + (kind || "sys");
-      div.textContent = safeText(text);
-      out.appendChild(div);
-      out.scrollTop = out.scrollHeight;
-    }
-
-    function updatePills(){
-      modulePill.textContent = "module: " + S.ui.module;
-      memPill.textContent = "mem: " + S.memory.length;
-    }
-
-    // ---- Network label ----
-    function refreshNet(){
-      const online = navigator.onLine;
-      netLabel.textContent = online ? "— online" : "— no network";
-      setStatus(online ? "good" : "warn", online ? "Ready" : "Offline (local)");
-    }
-    window.addEventListener("online", refreshNet);
-    window.addEventListener("offline", refreshNet);
-
-    // ---- Commands ----
-    function paletteCommands(){
-      return [
-        { title:"Switch: Shell", hint:"/module shell", key:"module shell" },
-        { title:"Switch: Notes", hint:"/module notes", key:"module notes" },
-        { title:"Switch: Memory", hint:"/module memory", key:"module memory" },
-        { title:"Switch: TerminalPet", hint:"/module pet", key:"module pet" },
-        { title:"Switch: CodeForge", hint:"/module forge", key:"module forge" },
-        { title:"Remember…", hint:"/remember I like neon", key:"remember " },
-        { title:"Recall…", hint:"/recall neon", key:"recall " },
-        { title:"Show memory list", hint:"/memory", key:"memory" },
-        { title:"Pet status", hint:"/pet", key:"pet" },
-        { title:"Export JSON", hint:"/export", key:"export" },
-        { title:"Import JSON", hint:"/import", key:"import" },
-        { title:"Reset all", hint:"/reset", key:"reset" },
-        { title:"Help", hint:"/help", key:"help" },
-      ];
-    }
-
-    function runCommand(raw){
-      const t = safeText(raw);
-      if(!t) return;
-
-      addCard("user", t);
-
-      // slash commands
-      if(t.startsWith("/")){
-        const parts = t.slice(1).split(" ");
-        const cmd = (parts.shift() || "").toLowerCase();
-        const arg = parts.join(" ").trim();
-
-        if(cmd === "help"){
-          addCard("sys",
-`Commands:
-  /module shell|notes|memory|pet|forge
-  /remember <text>
-  /recall <query>
-  /memory
-  /export
-  /import  (paste JSON after command)
-  /reset`);
-          return;
+            /* Transitions */
+            --transition-speed: 0.3s ease-in-out;
         }
 
-        if(cmd === "module"){
-          S.ui.module = (arg || "shell").toLowerCase();
-          updatePills();
-          addCard("sys", "Switched module → " + S.ui.module);
-          return;
+        /* Base styles */
+        body {
+            font-family: var(--font-family-body);
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-base);
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+            overflow-x: hidden; /* Prevent horizontal scroll */
         }
 
-        if(cmd === "remember"){
-          if(!arg){ addCard("err","Usage: /remember <text>"); return; }
-          S.memory.push({ t: Date.now(), text: arg });
-          updatePills();
-          addCard("sys","Saved to memory.");
-          return;
+        /* Accessibility: Focus styles */
+        :focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+            border-radius: var(--border-radius-sm);
         }
 
-        if(cmd === "recall"){
-          if(!arg){ addCard("err","Usage: /recall <query>"); return; }
-          const q = arg.toLowerCase();
-          const hits = S.memory
-            .map(m => m.text)
-            .filter(x => x.toLowerCase().includes(q))
-            .slice(-12);
-          addCard("sys", hits.length ? ("Matches:\n- " + hits.join("\n- ")) : "No matches.");
-          return;
+        /* Semantic HTML Reset/Base */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-family-heading);
+            color: var(--primary-color);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            line-height: 1.2;
+        }
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color var(--transition-speed);
+        }
+        a:hover, a:focus {
+            color: var(--accent-color);
+            text-decoration: underline;
         }
 
-        if(cmd === "memory"){
-          const items = S.memory.slice(-50).map(m => "- " + m.text);
-          addCard("sys", items.length ? ("Memory:\n" + items.join("\n")) : "Memory is empty.");
-          return;
+        /* Layout Primitives (Flexbox/Grid for responsiveness) */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: calc(var(--spacing-unit) * 2);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Adaptive columns */
+            gap: calc(var(--spacing-unit) * 3);
+        }
+        .flex-group {
+            display: flex;
+            gap: var(--spacing-unit);
+            align-items: center;
         }
 
-        if(cmd === "export"){
-          const blob = JSON.stringify({ S }, null, 2);
-          addCard("sys", "Export JSON (copy):\n" + blob);
-          return;
+        /* UI Components (Conceptual - rendered by JS) */
+        .card {
+            background-color: var(--background-color); /* self-colored for visual separation */
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: var(--border-radius-md);
+            padding: calc(var(--spacing-unit) * 3);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all var(--transition-speed);
+        }
+        .button {
+            display: inline-block;
+            padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: background-color var(--transition-speed);
+        }
+        .button:hover {
+            background-color: var(--accent-color);
         }
 
-        if(cmd === "import"){
-          if(!arg){ addCard("err","Paste JSON after /import"); return; }
-          try{
-            const obj = JSON.parse(arg);
-            if(obj && obj.S){
-              Object.assign(S, obj.S);
-              updatePills();
-              addCard("sys","Imported successfully.");
-            } else {
-              addCard("err","Invalid format (expected {S:{...}}).");
+        /* Dark Mode */
+        body.dark-mode {
+            background-color: var(--dark-background-color);
+            color: var(--dark-text-color);
+            --primary-color: #8ab4f8; /* Lighter primary for dark mode */
+            --secondary-color: #bdc1c6;
+            --background-color: var(--dark-background-color); /* Ensure components also adapt */
+            --text-color: var(--dark-text-color);
+            --accent-color: #6ee37b;
+        }
+        body.dark-mode .card {
+            border-color: rgba(255,255,255,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            :root {
+                --font-size-base: 15px;
             }
-          }catch(e){
-            addCard("err","Import failed: " + e.message);
-          }
-          return;
+            .container {
+                padding: calc(var(--spacing-unit) * 1.5);
+            }
+            .grid {
+                grid-template-columns: 1fr; /* Stack columns on small screens */
+            }
+        }
+        @media (max-width: 480px) {
+            :root {
+                --font-size-base: 14px;
+            }
         }
 
-        if(cmd === "reset"){
-          S.ui.module = "shell";
-          S.ui.lastPaletteQuery = "";
-          S.memory = [];
-          out.innerHTML = "";
-          updatePills();
-          addCard("sys","Reset complete.");
-          return;
+        /* Hidden utility class (for JS toggling) */
+        .hidden { display: none !important; }
+
+        /* Base64 encoded SVG for an icon (example) */
+        .icon {
+            display: inline-block;
+            width: 1em; /* Adjust as needed */
+            height: 1em;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMCAwYzEyLjIyIDE0Ljg4IDEwLjggMjQuNDkgMjQtNXYtMjQuNnpNNi4zIDEyLjdsNS45LTUuOWEzLjc2NiAzLjc2NiAwIDAgMCA1LjMgMC42IDIuMjcyIDIuMjcyIDAgMCAwIC43IDEuNSAyLjUzIDIuNTMgMCAwIDAgMS42IDEuNiAyLjI3MiAyLjI3MiAwIDAgMCAxLjUgLjcgMy43NjYgMy43NjYgMCAwIDAgLjYgNS4zTDExLjMgMjMuNyAyMy43IDIxLjMgMTIuMyAxMi43eiIvPjwvc3ZnPg==');
+            background-repeat: no-repeat;
+            background-size: contain;
+            vertical-align: middle;
+            fill: currentColor; /* Inherit text color */
         }
 
-        if(cmd === "pet"){
-          addCard("sys","TerminalPet: (stub) happy • energy 92 • hunger 14");
-          return;
-        }
+    </style>
+</head>
+<body>
+    <header class="container flex-group" role="banner">
+        <h1>The OmniFile</h1>
+        <button id="theme-toggle" class="button" aria-label="Toggle dark mode">🌙</button>
+        <button id="reset-brain" class="button" aria-label="Reset Brain Engine">🧠 Reset</button>
+    </header>
 
-        addCard("err","Unknown command. Try /help");
-        return;
-      }
+    <main class="container" role="main">
+        <section id="introduction">
+            <h2>Welcome, <span id="user-name">Guest</span>!</h2>
+            <p>This is a single-file, futureproof website concept.</p>
+            <p>The "Brain Engine" below can adapt based on your interactions and preferences, which are stored locally.</p>
+            <p>What are you interested in today?</p>
+            <div class="flex-group" style="margin-top: calc(var(--spacing-unit) * 2);">
+                <input type="text" id="user-query" placeholder="e.g., 'tech', 'design', 'help'" class="input-field" style="flex-grow: 1; padding: var(--spacing-unit); border: 1px solid var(--secondary-color); border-radius: var(--border-radius-sm);">
+                <button id="ask-brain" class="button">Ask Brain</button>
+            </div>
+            <div id="brain-response" class="card" style="margin-top: calc(var(--spacing-unit) * 2);">
+                <p>Waiting for your input...</p>
+            </div>
+        </section>
 
-      // Non-command input: treat as shell-like echo for now
-      addCard("sys", "→ " + t);
-    }
+        <section id="content-area" style="margin-top: calc(var(--spacing-unit) * 5);">
+            <h2>Suggested Content</h2>
+            <div id="dynamic-content" class="grid">
+                <!-- Content will be injected here by the Brain Engine -->
+                <div class="card"><h3>Default Article 1</h3><p>This is a default piece of content, waiting for personalization.</p><button class="button small">Read More</button></div>
+                <div class="card"><h3>Default Article 2</h3><p>The Brain Engine will replace or reorder these based on your query.</p><button class="button small">Read More</button></div>
+            </div>
+        </section>
 
-    // ---- Composer behavior (Enter sends, Shift+Enter newline) ----
-    function autoGrow(){
-      input.style.height = "auto";
-      input.style.height = Math.min(input.scrollHeight, 120) + "px";
-    }
-    input.addEventListener("input", autoGrow);
+        <section id="user-preferences" style="margin-top: calc(var(--spacing-unit) * 5);">
+            <h2>Your Local Preferences</h2>
+            <p>These preferences are stored in your browser's local storage.</p>
+            <label for="preferred-name">Preferred Name:</label>
+            <input type="text" id="preferred-name" class="input-field" style="padding: var(--spacing-unit); border: 1px solid var(--secondary-color); border-radius: var(--border-radius-sm);">
+            <button id="save-preferences" class="button" style="margin-left: var(--spacing-unit);">Save</button>
+            <p style="margin-top: var(--spacing-unit);">Last interaction: <span id="last-interaction">Never</span></p>
+        </section>
+    </main>
 
-    input.addEventListener("keydown", (e) => {
-      if(e.key === "Enter" && !e.shiftKey){
-        e.preventDefault();
-        send();
-      } else if(e.key === "/" && input.value.trim() === ""){
-        // quick open palette from empty prompt
-        // (don’t block typing / in normal text)
-        openPalette();
-        e.preventDefault();
-      }
-    });
+    <footer class="container" role="contentinfo" style="margin-top: calc(var(--spacing-unit) * 5); text-align: center; color: var(--secondary-color);">
+        <p>&copy; 2023 OmniFile. Powered by JavaScript, fueled by curiosity.</p>
+    </footer>
 
-    function send(){
-      const v = input.value;
-      input.value = "";
-      autoGrow();
-      runCommand(v);
-    }
-    sendBtn.addEventListener("click", send);
+    <script>
+        /* ==========================================================
+           2. FUTUREPROOF BACKEND: Local Persistence, API Abstraction
+           ========================================================== */
+        const _DATA_STORE_ = {
+            prefix: 'omni_file_', // Unique prefix for local storage keys
 
-    // ---- Command Palette ----
-    function openPalette(){
-      overlay.classList.add("show");
-      overlay.setAttribute("aria-hidden","false");
-      palInput.value = S.ui.lastPaletteQuery || "";
-      palInput.focus();
-      renderPalette(palInput.value);
-    }
-    function closePalette(){
-      overlay.classList.remove("show");
-      overlay.setAttribute("aria-hidden","true");
-      S.ui.lastPaletteQuery = palInput.value || "";
-      input.focus();
-    }
-    function renderPalette(q){
-      const query = (q||"").toLowerCase().trim();
-      const cmds = paletteCommands().filter(c => {
-        if(!query) return true;
-        return (c.title + " " + c.hint + " " + c.key).toLowerCase().includes(query);
-      });
+            // Get data from localStorage
+            get(key, defaultValue = null) {
+                try {
+                    const item = localStorage.getItem(this.prefix + key);
+                    return item ? JSON.parse(item) : defaultValue;
+                } catch (e) {
+                    console.error(`Error reading key ${key} from localStorage:`, e);
+                    return defaultValue;
+                }
+            },
 
-      palList.innerHTML = "";
-      cmds.forEach(c => {
-        const row = document.createElement("div");
-        row.className = "palItem";
-        row.innerHTML = `
-          <div class="palLeft">
-            <div class="palTitle">${c.title}</div>
-            <div class="palHint">${c.hint}</div>
-          </div>
-          <div class="kbd">${c.key}</div>
-        `;
-        row.addEventListener("click", () => {
-          closePalette();
-          input.value = c.hint + (c.hint.endsWith(" ") ? "" : "");
-          autoGrow();
-          input.focus();
-        });
-        palList.appendChild(row);
-      });
-    }
+            // Set data to localStorage
+            set(key, value) {
+                try {
+                    localStorage.setItem(this.prefix + key, JSON.stringify(value));
+                    return true;
+                } catch (e) {
+                    console.error(`Error writing key ${key} to localStorage:`, e);
+                    return false;
+                }
+            },
 
-    palInput.addEventListener("input", () => renderPalette(palInput.value));
-    overlay.addEventListener("click", (e) => { if(e.target === overlay) closePalette(); });
-    window.addEventListener("keydown", (e) => {
-      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+            // Remove data from localStorage
+            remove(key) {
+                try {
+                    localStorage.removeItem(this.prefix + key);
+                    return true;
+                } catch (e) {
+                    console.error(`Error removing key ${key} from localStorage:`, e);
+                    return false;
+                }
+            },
 
-      if(ctrlOrCmd && e.key.toLowerCase() === "k"){
-        e.preventDefault();
-        if(overlay.classList.contains("show")) closePalette();
-        else openPalette();
-      }
-      if(e.key === "Escape" && overlay.classList.contains("show")){
-        e.preventDefault();
-        closePalette();
-      }
-    });
+            // Clear all OmniFile data
+            clear() {
+                try {
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith(this.prefix)) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                    return true;
+                } catch (e) {
+                    console.error("Error clearing OmniFile localStorage:", e);
+                    return false;
+                }
+            },
 
-    // ---- Boot ----
-    function boot(){
-      refreshNet();
-      updatePills();
-      addCard("sys",
-`Welcome to AuroraFeed Shell.
-Try:
-  /help
-  /remember I like neon
-  /recall neon
-  /module forge`);
-      input.focus();
-      autoGrow();
-    }
-    boot();
+            // --- Future-proof API Abstraction for potential external services ---
+            // This method would be updated to use `fetch` if an actual backend is introduced.
+            async syncWithExternalService(data) {
+                // In a true "one-file" context, this method is purely conceptual
+                // or could trigger a simple client-side action.
+                console.log("Simulating sync with external service:", data);
+                // Example: return Promise.resolve({ status: 'synced', timestamp: new Date() });
+                // If there was an API:
+                // try {
+                //     const response = await fetch('/api/data-sync', {
+                //         method: 'POST',
+                //         headers: { 'Content-Type': 'application/json' },
+                //         body: JSON.stringify(data)
+                //     });
+                //     return response.json();
+                // } catch (error) {
+                //     console.error('External sync failed:', error);
+                //     return { status: 'failed', error: error.message };
+                // }
+                return Promise.resolve({ success: true, message: "No external sync configured." });
+            }
+        };
 
-    // ---- Hard error guard (never render code; show a clean error card) ----
-    window.addEventListener("error", (e) => {
-      addCard("err", "Error: " + (e.message || "Unknown"));
-      setStatus("bad","Error");
-    });
-    window.addEventListener("unhandledrejection", (e) => {
-      addCard("err", "Promise rejected: " + (e.reason?.message || e.reason || "Unknown"));
-      setStatus("bad","Error");
-    });
-  </script>
+        /* ==========================================================
+           3. FUTUREPROOF BRAIN ENGINE: Rule-based, Adaptive, Contextual
+           ========================================================== */
+        const _BRAIN_ENGINE_ = {
+            // Internal knowledge base (can be extended or updated)
+            knowledge: _DATA_STORE_.get('brain_knowledge', {
+                topics: {
+                    'tech': ['AI', 'web development', 'cybersecurity', 'gadgets'],
+                    'design': ['UI/UX', 'graphic design', 'architecture', 'art'],
+                    'help': ['FAQ', 'contact', 'troubleshooting', 'guidance'],
+                    'default': ['innovation', 'future trends', 'learning']
+                },
+                contentPool: [
+                    { id: 'article-ai-future', title: 'The Future of AI in Web', tags: ['tech', 'AI'], content: 'Exploring the impact of AI...' },
+                    { id: 'article-ux-principles', title: 'Timeless UI/UX Principles', tags: ['design', 'UI/UX'], content: 'Fundamental rules for great interfaces...' },
+                    { id: 'article-getting-started', title: 'Getting Started with OmniFile', tags: ['help'], content: 'A guide to using this demo...' },
+                    { id: 'article-web-dev-trends', title: 'Top Web Dev Trends for 2024', tags: ['tech', 'web development'], content: 'Stay ahead of the curve...' },
+                    { id: 'article-minimalist-design', title: 'The Art of Minimalist Design', tags: ['design'], content: 'Less is often more...' },
+                    { id: 'article-brain-reset', title: 'Understanding the Brain Reset', tags: ['help', 'brain'], content: 'What happens when you reset the engine...' }
+                ]
+            }),
+
+            // User context (dynamic, stored locally)
+            userContext: _DATA_STORE_.get('user_context', {
+                name: 'Guest',
+                interests: [], // Learns based on queries
+                lastQuery: null,
+                interactionCount: 0,
+                lastInteractionTimestamp: null
+            }),
+
+            // Rules for inference and adaptation
+            rules: {
+                // Rule 1: Prioritize content based on declared interests
+                prioritizeByInterests(content, context) {
+                    if (context.interests.length === 0) return content;
+                    return [...content].sort((a, b) => {
+                        const aScore = a.tags.filter(tag => context.interests.includes(tag)).length;
+                        const bScore = b.tags.filter(tag => context.interests.includes(tag)).length;
+                        return bScore - aScore; // Higher score first
+                    });
+                },
+
+                // Rule 2: Suggest related topics based on last query
+                suggestRelatedTopics(query, context) {
+                    const queryLower = query.toLowerCase();
+                    const suggested = new Set();
+                    for (const topic in this.knowledge.topics) {
+                        if (queryLower.includes(topic)) {
+                            this.knowledge.topics[topic].forEach(sub => suggested.add(sub));
+                        }
+                    }
+                    if (suggested.size > 0) {
+                        return `Perhaps you'd also be interested in: ${Array.from(suggested).join(', ')}.`;
+                    }
+                    return '';
+                },
+
+                // Rule 3: Personalize greeting
+                getGreeting(context) {
+                    return `Welcome, ${context.name}!`;
+                }
+            },
+
+            // Updates the brain's context based on user interaction
+            updateContext(query = null) {
+                if (query) {
+                    this.userContext.lastQuery = query;
+                    this.userContext.interactionCount++;
+                    this.userContext.lastInteractionTimestamp = new Date().toISOString();
+
+                    // Simple "learning": add query terms to interests if relevant
+                    const queryWords = query.toLowerCase().split(/\s+/);
+                    for (const word of queryWords) {
+                        for (const topic in this.knowledge.topics) {
+                            if (topic.includes(word) || this.knowledge.topics[topic].some(sub => sub.includes(word))) {
+                                if (!this.userContext.interests.includes(topic)) {
+                                    this.userContext.interests.push(topic);
+                                }
+                            }
+                        }
+                    }
+                }
+                _DATA_STORE_.set('user_context', this.userContext);
+            },
+
+            // The core inference method
+            infer(query = '') {
+                this.updateContext(query);
+                const results = {
+                    message: '',
+                    suggestedContent: []
+                };
+
+                results.message = this.rules.getGreeting(this.userContext);
+
+                // Find relevant content based on query
+                let matchedContent = [];
+                if (query) {
+                    const queryLower = query.toLowerCase();
+                    matchedContent = this.knowledge.contentPool.filter(item =>
+                        item.title.toLowerCase().includes(queryLower) ||
+                        item.content.toLowerCase().includes(queryLower) ||
+                        item.tags.some(tag => queryLower.includes(tag))
+                    );
+                }
+
+                // If no specific match or general query, suggest based on interests
+                if (matchedContent.length === 0 && query) {
+                    results.message += ` I couldn't find an exact match for "${query}", but here are some suggestions based on your profile.`;
+                    matchedContent = this.knowledge.contentPool; // Use full pool for interest-based sorting
+                } else if (!query) {
+                    results.message += " Tell me what you're looking for!";
+                    matchedContent = this.knowledge.contentPool;
+                } else {
+                    results.message += ` Here's what I found for "${query}":`;
+                }
+
+
+                // Apply rules for content prioritization
+                results.suggestedContent = this.rules.prioritizeByInterests(matchedContent, this.userContext);
+
+                // Add related topic suggestions
+                const topicSuggestions = this.rules.suggestRelatedTopics(query, this.userContext);
+                if (topicSuggestions) {
+                    results.message += ` ${topicSuggestions}`;
+                }
+
+                return results;
+            },
+
+            // --- Future-proof external AI integration (conceptual) ---
+            async queryExternalAI(prompt) {
+                console.log("Simulating external AI query:", prompt);
+                // This would be replaced with an actual fetch() call to a serverless function
+                // or a direct AI API endpoint if CORS and API keys permit.
+                // Example:
+                // const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         'Authorization': 'Bearer YOUR_API_KEY' // Would require a secure way to store/retrieve key
+                //     },
+                //     body: JSON.stringify({
+                //         model: "gpt-3.5-turbo",
+                //         messages: [{ role: "user", content: prompt }]
+                //     })
+                // });
+                // const data = await response.json();
+                // return data.choices[0].message.content;
+                return Promise.resolve(`(Simulated AI response for "${prompt}") The future is bright and full of single-file websites!`);
+            },
+
+            // Resets all learned data for the user
+            resetBrain() {
+                _DATA_STORE_.remove('user_context');
+                this.userContext = {
+                    name: 'Guest',
+                    interests: [],
+                    lastQuery: null,
+                    interactionCount: 0,
+                    lastInteractionTimestamp: null
+                };
+                console.log('Brain engine reset for current user.');
+            }
+        };
+
+
+        /* ==========================================================
+           4. FUTUREPROOF UI MANAGER: Dynamic Rendering, Event Handling
+           ========================================================== */
+        const _UI_MANAGER_ = {
+            elements: {
+                body: document.body,
+                themeToggle: document.getElementById('theme-toggle'),
+                userNameSpan: document.getElementById('user-name'),
+                preferredNameInput: document.getElementById('preferred-name'),
+                savePreferencesButton: document.getElementById('save-preferences'),
+                lastInteractionSpan: document.getElementById('last-interaction'),
+                userQueryInput: document.getElementById('user-query'),
+                askBrainButton: document.getElementById('ask-brain'),
+                brainResponseDiv: document.getElementById('brain-response'),
+                dynamicContentDiv: document.getElementById('dynamic-content'),
+                resetBrainButton: document.getElementById('reset-brain')
+            },
+
+            init() {
+                this.loadPreferences();
+                this.applyTheme(_DATA_STORE_.get('theme', 'light'));
+                this.updateUserName();
+                this.bindEvents();
+                this.renderContent(_BRAIN_ENGINE_.infer().suggestedContent); // Initial content
+            },
+
+            bindEvents() {
+                this.elements.themeToggle.addEventListener('click', () => this.toggleTheme());
+                this.elements.savePreferencesButton.addEventListener('click', () => this.savePreferences());
+                this.elements.askBrainButton.addEventListener('click', () => this.askBrain());
+                this.elements.userQueryInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.askBrain();
+                });
+                this.elements.resetBrainButton.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to reset the Brain Engine (your preferences and learned interests)?')) {
+                        _BRAIN_ENGINE_.resetBrain();
+                        this.updateUserName(); // Reset name if it was tied to context
+                        this.loadPreferences(); // Reload default preferences
+                        this.renderBrainResponse("Brain engine has been reset. What would you like to explore now?");
+                        this.renderContent(_BRAIN_ENGINE_.infer().suggestedContent); // Render default content
+                    }
+                });
+
+                // Global event delegation for future-proof components
+                this.elements.body.addEventListener('click', (event) => {
+                    if (event.target.classList.contains('read-more-button')) {
+                        this.handleReadMore(event.target.dataset.articleId);
+                    }
+                });
+            },
+
+            // --- Theme Management ---
+            applyTheme(theme) {
+                this.elements.body.classList.toggle('dark-mode', theme === 'dark');
+                _DATA_STORE_.set('theme', theme);
+                this.elements.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            },
+            toggleTheme() {
+                const currentTheme = _DATA_STORE_.get('theme', 'light');
+                this.applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+            },
+
+            // --- Preference Management ---
+            loadPreferences() {
+                _BRAIN_ENGINE_.userContext = _DATA_STORE_.get('user_context', _BRAIN_ENGINE_.userContext);
+                this.elements.preferredNameInput.value = _BRAIN_ENGINE_.userContext.name;
+                this.updateUserName();
+                this.updateLastInteraction();
+            },
+            savePreferences() {
+                _BRAIN_ENGINE_.userContext.name = this.elements.preferredNameInput.value || 'Guest';
+                _DATA_STORE_.set('user_context', _BRAIN_ENGINE_.userContext);
+                this.updateUserName();
+                this.renderBrainResponse(`Your name has been updated to ${_BRAIN_ENGINE_.userContext.name}.`);
+                _BRAIN_ENGINE_.updateContext(); // Update context for non-query changes
+            },
+            updateUserName() {
+                this.elements.userNameSpan.textContent = _BRAIN_ENGINE_.userContext.name;
+            },
+            updateLastInteraction() {
+                const timestamp = _BRAIN_ENGINE_.userContext.lastInteractionTimestamp;
+                this.elements.lastInteractionSpan.textContent = timestamp ? new Date(timestamp).toLocaleString() : 'Never';
+            },
+
+            // --- Brain Engine Interaction ---
+            async askBrain() {
+                const query = this.elements.userQueryInput.value.trim();
+                if (!query) return;
+
+                this.elements.askBrainButton.disabled = true;
+                this.elements.brainResponseDiv.innerHTML = '<p>Thinking...</p>';
+
+                const result = _BRAIN_ENGINE_.infer(query);
+                this.renderBrainResponse(result.message);
+                this.renderContent(result.suggestedContent);
+
+                // Simulate asking an external AI too for a more "futureproof" feel
+                // const externalAIReply = await _BRAIN_ENGINE_.queryExternalAI(query);
+                // this.renderBrainResponse(`${result.message} <br> <em>${externalAIReply}</em>`);
+
+                this.elements.askBrainButton.disabled = false;
+                this.elements.userQueryInput.value = '';
+                this.updateLastInteraction();
+            },
+
+            renderBrainResponse(message) {
+                this.elements.brainResponseDiv.innerHTML = `<p>${message}</p>`;
+            },
+
+            // --- Dynamic Content Rendering ---
+            renderContent(contentItems) {
+                this.elements.dynamicContentDiv.innerHTML = ''; // Clear previous content
+                if (contentItems.length === 0) {
+                    this.elements.dynamicContentDiv.innerHTML = '<p>No content to display based on current context.</p>';
+                    return;
+                }
+                contentItems.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <h3>${item.title}</h3>
+                        <p>${item.content.substring(0, 100)}...</p>
+                        <button class="button read-more-button" data-article-id="${item.id}">Read More</button>
+                    `;
+                    this.elements.dynamicContentDiv.appendChild(card);
+                });
+            },
+
+            handleReadMore(articleId) {
+                const article = _BRAIN_ENGINE_.knowledge.contentPool.find(a => a.id === articleId);
+                if (article) {
+                    this.renderBrainResponse(`**Reading: ${article.title}**<br>${article.content}`);
+                    // Potentially update user context: user showed interest in this article's tags
+                    article.tags.forEach(tag => {
+                        if (!_BRAIN_ENGINE_.userContext.interests.includes(tag)) {
+                            _BRAIN_ENGINE_.userContext.interests.push(tag);
+                        }
+                    });
+                    _DATA_STORE_.set('user_context', _BRAIN_ENGINE_.userContext);
+                }
+            }
+        };
+
+        // Initialize the UI Manager when the DOM is ready
+        document.addEventListener('DOMContentLoaded', () => _UI_MANAGER_.init());
+
+        // Use a Web Worker for heavy tasks (conceptual - not implemented for this simple example)
+        // If you had a very heavy, client-side ML model (e.g., small TensorFlow.js model)
+        // that needed to run without blocking the UI, you'd put its logic in a Web Worker.
+        // const workerCode = `
+        //     self.onmessage = function(e) {
+        //         const data = e.data;
+        //         // Perform heavy computation here
+        //         const result = 'Processed: ' + data.input;
+        //         self.postMessage({ result: result });
+        //     };
+        // `;
+        // const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+        // const workerUrl = URL.createObjectURL(workerBlob);
+        // const myWorker = new Worker(workerUrl);
+
+        // myWorker.onmessage = function(e) {
+        //     console.log('Message from worker:', e.data.result);
+        // };
+
+        // // Example usage:
+        // // myWorker.postMessage({ input: 'some complex data' });
+
+    </script>
 </body>
 </html>
